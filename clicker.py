@@ -18,7 +18,7 @@ db = {
 VERSION = "1.0"
 START_TIME = time.time()
 
-client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
+client = TelegramClient('main', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
 client.start()
 client_id = client.get_me(True).user_id
 
@@ -115,6 +115,22 @@ def submit_taps(taps:int, auth:str, timex=time.time()):
     return response
 
 def apply_boost(auth:str, type:str="energy"):
+    # Types: turbo, energy
+    headers = {
+        "accept": "/",
+        "accept-language": "en-US,en;q=0.9,fa;q=0.8",
+        "content-type": "application/json",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "Authorization": f"Bearer {auth}"
+    }
+    payload = {"type":type}
+    response = session.post('https://api.tapswap.ai/api/player/apply_boost', headers=headers, json=payload).json()
+    return response
+
+def upgrade(auth:str, type:str="charge"):
+    # Types: energy, tap, charge
     headers = {
         "accept": "/",
         "accept-language": "en-US,en;q=0.9,fa;q=0.8",
@@ -204,18 +220,39 @@ session.mount("https://", BypassTLSv1_3())
 url = getUrlsync().url
 auth = authToken(url)
 balance = 0
+mining = False
 print(url)
 # ---------------
 
-@aiocron.crontab('*/1 * * * *')
-async def sendTaps():
+def turboTaps():
     global auth, balance, db
+    
+    xtap = submit_taps(1, auth)
+    for boost in xtap['player']['boost']:
+        if boost['type'] == 'turbo' and boost['end'] > time.time():
+            print("[+] Turbo Tapping ...")
+            for i in range(random.randint(8, 14)):
+                taps = random.randint(80, 84)
+                print(f'[+] Turbo: {taps} ...')
+                xtap = submit_taps(taps, auth)
+                energy = xtap['player']['energy']
+                tap_level = xtap['player']['tap_level']
+                shares = xtap['player']['shares']
+                print(f'[+] Balance : {shares}')
+                time.sleep(random.randint(0, round(60/taps)+random.randint(1, 3)))
+            
+@aiocron.crontab('*/2 * * * *')
+async def sendTaps():
+    global auth, balance, db, mining
     
     if db['click'] != 'on':
         return
     
-    print('[+] Lets Mine')
+    if mining:
+        return
+    
     # ---- Check Energy:
+    mining = True
     xtap = submit_taps(1, auth)
     energy = xtap['player']['energy']
     tap_level = xtap['player']['tap_level']
@@ -223,7 +260,7 @@ async def sendTaps():
     shares = xtap['player']['shares']
     
     if energy >= (energy_level*500)-(tap_level*random.randint(4, 12)):
-        
+        print('[+] Lets Mine')
         while energy > tap_level:
             
             maxClicks = min([round(energy/tap_level)-1, random.randint(70, 80)])
@@ -231,7 +268,8 @@ async def sendTaps():
                 taps = random.randint(random.randint(1, 10), random.randint(11, maxClicks))
             except:
                 taps = maxClicks
-            
+            if taps < 1:
+                break
             print(f'[+] Sending {taps} ...')
             xtap = submit_taps(taps, auth)
             energy = xtap['player']['energy']
@@ -239,16 +277,26 @@ async def sendTaps():
             shares = xtap['player']['shares']
             
             print(f'[+] Balance : {shares}')
+            print(energy, tap_level)
             time.sleep(random.randint(0, round(60/taps)))
-    else:
-        print('[~] Waiting For Full Tank')
+
+    
+    balance = shares
     
     for boost in xtap['player']['boost']:
         if boost['type'] == 'energy' and boost['cnt'] > 0:
             print('[+] Activing Full Tank ...')
             apply_boost(auth)
-                
-    balance = shares
+            break
+        
+        if boost['type'] == 'turbo' and boost['cnt'] > 0:
+            print('[+] Activing Turbo ...')
+            apply_boost(auth, "turbo")
+            turboTaps()
+            break
+    
+    mining = False
+    
     
 
 @aiocron.crontab('*/15 * * * *')
