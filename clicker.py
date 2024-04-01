@@ -222,8 +222,9 @@ async def sendTaps():
 async def updateWebviewUrl():
     global url, auth
     
-    url = await getUrl().url
-    auth = authToken(url)
+    url = await getUrl()
+    print(url)
+    auth = authToken(url.url)
 
 @client.on(events.NewMessage())
 async def handler(event):
