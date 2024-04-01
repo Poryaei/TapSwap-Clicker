@@ -2,7 +2,8 @@ import asyncio
 from telethon.sync import TelegramClient
 from telethon.sync import functions, types, events
 
-import json, requests, urllib, time, aiocron, random
+import json, requests, urllib, time, aiocron, random, ssl
+
 # -----------
 with open('config.json') as f:
     data = json.load(f)
@@ -25,6 +26,35 @@ client_id = client.get_me(True).user_id
 print("Client is Ready ;)")
 
 # -----------
+
+class BypassTLSv1_3(requests.adapters.HTTPAdapter):
+    SUPPORTED_CIPHERS = [
+        "ECDHE-ECDSA-AES128-GCM-SHA256", "ECDHE-RSA-AES128-GCM-SHA256",
+        "ECDHE-ECDSA-AES256-GCM-SHA384", "ECDHE-RSA-AES256-GCM-SHA384",
+        "ECDHE-ECDSA-CHACHA20-POLY1305", "ECDHE-RSA-CHACHA20-POLY1305",
+        "ECDHE-RSA-AES128-SHA", "ECDHE-RSA-AES256-SHA",
+        "AES128-GCM-SHA256", "AES256-GCM-SHA384", "AES128-SHA", "AES256-SHA", "DES-CBC3-SHA",
+        "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256",
+        "TLS_AES_128_CCM_SHA256", "TLS_AES_256_CCM_8_SHA256"
+    ]
+
+    def __init__(self, *args, **kwargs):
+        self.ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        self.ssl_context.set_ciphers(':'.join(BypassTLSv1_3.SUPPORTED_CIPHERS))
+        self.ssl_context.set_ecdh_curve("prime256v1")
+        self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
+        self.ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
+        super().__init__(*args, **kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self.ssl_context
+        kwargs["source_address"] = None
+        return super().init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        kwargs["ssl_context"] = self.ssl_context
+        kwargs["source_address"] = None
+        return super().proxy_manager_for(*args, **kwargs)
 
 
 def getUrlsync():
@@ -80,7 +110,7 @@ def submit_taps(taps:int, auth:str, timex=time.time()):
     }
     
     payload = {"taps":taps, "time":timex}
-    response = requests.post('https://api.tapswap.ai/api/player/submit_taps', headers=headers, json=payload).json()
+    response = session.post('https://api.tapswap.ai/api/player/submit_taps', headers=headers, json=payload).json()
     # Energy: response['player']['energy']
     return response
 
@@ -95,7 +125,7 @@ def apply_boost(auth:str, type:str="energy"):
         "Authorization": f"Bearer {auth}"
     }
     payload = {"type":type}
-    response = requests.post('https://api.tapswap.ai/api/player/apply_boost', headers=headers, json=payload).json()
+    response = session.post('https://api.tapswap.ai/api/player/apply_boost', headers=headers, json=payload).json()
     return response
 
 def convert_uptime(uptime):
@@ -169,9 +199,12 @@ Coded By: @uPaSKaL | GitHub: [Poryaei](https://github.com/Poryaei)
 
 
 # ---------------
+session = requests.sessions.Session()
+session.mount("https://", BypassTLSv1_3())
 url = getUrlsync().url
 auth = authToken(url)
 balance = 0
+print(url)
 # ---------------
 
 @aiocron.crontab('*/1 * * * *')
@@ -189,7 +222,7 @@ async def sendTaps():
     energy_level = xtap['player']['energy_level']
     shares = xtap['player']['shares']
     
-    if energy >= (energy_level*500)-(tap_level*random.randint(2, 4)):
+    if energy >= (energy_level*500)-(tap_level*random.randint(4, 12)):
         
         while energy > tap_level:
             
