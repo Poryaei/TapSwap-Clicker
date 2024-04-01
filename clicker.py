@@ -18,7 +18,7 @@ db = {
 VERSION = "1.0"
 START_TIME = time.time()
 
-client = TelegramClient('main', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
+client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
 client.start()
 client_id = client.get_me(True).user_id
 
