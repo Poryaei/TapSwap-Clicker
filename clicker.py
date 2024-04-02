@@ -221,6 +221,7 @@ url = getUrlsync().url
 auth = authToken(url)
 balance = 0
 mining = False
+nextMineTime = 0
 print(url)
 # ---------------
 
@@ -239,16 +240,17 @@ def turboTaps():
                 tap_level = xtap['player']['tap_level']
                 shares = xtap['player']['shares']
                 print(f'[+] Balance : {shares}')
-                time.sleep(random.randint(0, round(60/taps)+random.randint(1, 3)))
+                time.sleep(random.randint(2, random.randint(3, 5)))
             
-@aiocron.crontab('*/2 * * * *')
+@aiocron.crontab('*/1 * * * *')
 async def sendTaps():
-    global auth, balance, db, mining
+    global auth, balance, db, mining, nextMineTime
     
     if db['click'] != 'on':
         return
     
-    if mining:
+    if mining or time.time() < nextMineTime:
+        print('[+] Waiting ...')
         return
     
     # ---- Check Energy:
@@ -257,15 +259,17 @@ async def sendTaps():
     energy = xtap['player']['energy']
     tap_level = xtap['player']['tap_level']
     energy_level = xtap['player']['energy_level']
+    charge_level = xtap['player']['charge_level']
     shares = xtap['player']['shares']
     
     if energy >= (energy_level*500)-(tap_level*random.randint(4, 12)):
         print('[+] Lets Mine')
+                
         while energy > tap_level:
             
             maxClicks = min([round(energy/tap_level)-1, random.randint(70, 80)])
             try:
-                taps = random.randint(random.randint(1, 10), random.randint(11, maxClicks))
+                taps = random.randint(random.randint(2, 10), random.randint(11, maxClicks))
             except:
                 taps = maxClicks
             if taps < 1:
@@ -277,16 +281,20 @@ async def sendTaps():
             shares = xtap['player']['shares']
             
             print(f'[+] Balance : {shares}')
-            print(energy, tap_level)
-            time.sleep(random.randint(0, round(60/taps)))
+            if tap_level > 1:
+                time.sleep(random.randint(2, random.randint(3, 5)))
+            if energy < tap_level*3:
+                break
 
     
     balance = shares
+    fulltank = False
     
     for boost in xtap['player']['boost']:
         if boost['type'] == 'energy' and boost['cnt'] > 0:
             print('[+] Activing Full Tank ...')
             apply_boost(auth)
+            fulltank = True
             break
         
         if boost['type'] == 'turbo' and boost['cnt'] > 0:
@@ -296,6 +304,12 @@ async def sendTaps():
             break
     
     mining = False
+    
+    if not fulltank:
+        time_to_recharge = ((energy_level*500)-energy) / charge_level
+        print(time_to_recharge)
+        nextMineTime = time.time()+time_to_recharge
+        
     
     
 
