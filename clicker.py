@@ -154,6 +154,9 @@ async def answer(event):
     global db
     text = event.raw_text
     user_id = event.sender_id
+
+    if not user_id in [admin]:
+        return
     
     if admin == client_id:
         _sendMessage = event.edit
