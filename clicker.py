@@ -214,6 +214,7 @@ Coded By: @uPaSKaL | GitHub: [Poryaei](https://github.com/Poryaei)
         await client.disconnect()
 
 
+
 # ---------------
 session = requests.sessions.Session()
 session.mount("https://", BypassTLSv1_3())
@@ -233,14 +234,16 @@ def turboTaps():
         if boost['type'] == 'turbo' and boost['end'] > time.time():
             print("[+] Turbo Tapping ...")
             for i in range(random.randint(8, 14)):
-                taps = random.randint(80, 84)
+                taps = random.randint(84, 96)
                 print(f'[+] Turbo: {taps} ...')
                 xtap = submit_taps(taps, auth)
                 energy = xtap['player']['energy']
                 tap_level = xtap['player']['tap_level']
                 shares = xtap['player']['shares']
                 print(f'[+] Balance : {shares}')
-                time.sleep(random.randint(2, random.randint(3, 5)))
+                time.sleep(random.randint(1, 3))
+                if not boost['end'] > time.time():
+                    break
             
 @aiocron.crontab('*/1 * * * *')
 async def sendTaps():
@@ -262,19 +265,21 @@ async def sendTaps():
     charge_level = xtap['player']['charge_level']
     shares = xtap['player']['shares']
     
+    x = time.time()
+    
     if energy >= (energy_level*500)-(tap_level*random.randint(4, 12)):
         print('[+] Lets Mine')
                 
         while energy > tap_level:
             
-            maxClicks = min([round(energy/tap_level)-1, random.randint(70, 80)])
+            maxClicks = min([round(energy/tap_level)-1, random.randint(70, 96)])
             try:
-                taps = random.randint(random.randint(2, 10), random.randint(11, maxClicks))
+                taps = maxClicks
             except:
                 taps = maxClicks
             if taps < 1:
                 break
-            print(f'[+] Sending {taps} ...')
+            print(f'[+] Sending {taps} taps ...')
             xtap = submit_taps(taps, auth)
             energy = xtap['player']['energy']
             tap_level = xtap['player']['tap_level']
@@ -282,10 +287,11 @@ async def sendTaps():
             
             print(f'[+] Balance : {shares}')
             if tap_level > 1:
-                time.sleep(random.randint(2, random.randint(3, 5)))
+                time.sleep(random.randint(1, 3))
             if energy < tap_level*3:
                 break
-
+    
+    print("Time: ", time.time() - x,"S")
     
     balance = shares
     fulltank = False
@@ -301,6 +307,7 @@ async def sendTaps():
             print('[+] Activing Turbo ...')
             apply_boost(auth, "turbo")
             turboTaps()
+            fulltank = True
             break
     
     mining = False
