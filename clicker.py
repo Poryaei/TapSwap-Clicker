@@ -4,6 +4,8 @@ from telethon.sync import functions, types, events
 
 import json, requests, urllib, time, aiocron, random, ssl
 
+import socks
+
 # -----------
 with open('config.json') as f:
     data = json.load(f)
@@ -15,15 +17,17 @@ db = {
     'click': 'on'
 }
 
-VERSION = "1.0"
+VERSION = "1.1"
 START_TIME = time.time()
 
-client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
+client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}", proxy=(socks.SOCKS5, '127.0.0.1', 2080))
 client.start()
 client_id = client.get_me(True).user_id
 
 
 print("Client is Ready ;)")
+
+
 
 # -----------
 
@@ -111,7 +115,6 @@ def submit_taps(taps:int, auth:str, timex=time.time()):
     
     payload = {"taps":taps, "time":timex}
     response = session.post('https://api.tapswap.ai/api/player/submit_taps', headers=headers, json=payload).json()
-    # Energy: response['player']['energy']
     return response
 
 def apply_boost(auth:str, type:str="energy"):
@@ -141,7 +144,22 @@ def upgrade(auth:str, type:str="charge"):
         "Authorization": f"Bearer {auth}"
     }
     payload = {"type":type}
-    response = session.post('https://api.tapswap.ai/api/player/apply_boost', headers=headers, json=payload).json()
+    response = session.post('https://api.tapswap.ai/api/player/upgrade', headers=headers, json=payload).json()
+    return response
+
+def claim_reward(auth:str, task_id:str):
+    headers = {
+        "accept": "/",
+        "accept-language": "en-US,en;q=0.9,fa;q=0.8",
+        "content-type": "application/json",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "Authorization": f"Bearer {auth}"
+    }
+    payload = {"task_id":task_id}
+    response = session.post('https://api.tapswap.ai/api/player/claim_reward', headers=headers, json=payload).json()
+    print(response)
     return response
 
 def convert_uptime(uptime):
@@ -154,7 +172,7 @@ async def answer(event):
     global db
     text = event.raw_text
     user_id = event.sender_id
-
+    
     if not user_id in [admin]:
         return
     
@@ -181,6 +199,9 @@ async def answer(event):
     elif text == '/balance':
         await _sendMessage(f'🟣 Balance: {balance}')
     
+    elif text == '/url':
+        await _sendMessage(f"💡 WebApp Url: `{url}`")
+    
     elif text == '/help':
         _uptime = time.time() - START_TIME
         _hours, _minutes = convert_uptime(_uptime)
@@ -202,6 +223,7 @@ To start Tapping , you can use the following commands:
 🟣 `/help` - Display help menu
 🟣 `/balance` - Show Tap Swap balance
 🟣 `/stop` - Stop the robot
+🟣 `/url` - WebApp Url
 
 
 Coded By: @uPaSKaL | GitHub: [Poryaei](https://github.com/Poryaei)
@@ -215,7 +237,6 @@ Coded By: @uPaSKaL | GitHub: [Poryaei](https://github.com/Poryaei)
     elif text == '/stop':
         await _sendMessage('👋')
         await client.disconnect()
-
 
 
 # ---------------
@@ -232,12 +253,12 @@ print(url)
 def turboTaps():
     global auth, balance, db
     
-    xtap = submit_taps(1, auth)
+    xtap = submit_taps(random.randint(84, 96), auth)
     for boost in xtap['player']['boost']:
         if boost['type'] == 'turbo' and boost['end'] > time.time():
             print("[+] Turbo Tapping ...")
-            for i in range(random.randint(8, 14)):
-                taps = random.randint(84, 96)
+            for i in range(random.randint(8, 10)):
+                taps = random.randint(99, 200)
                 print(f'[+] Turbo: {taps} ...')
                 xtap = submit_taps(taps, auth)
                 energy = xtap['player']['energy']
@@ -314,6 +335,10 @@ async def sendTaps():
                 turboTaps()
                 fulltank = True
                 break
+        
+        for claims in xtap['player']['claims']:
+            print('[+] Claim reward:  ', claims)
+            claim_reward(auth, claims)
     
     except Exception as e:
         print(e)
@@ -323,17 +348,19 @@ async def sendTaps():
     if not fulltank:
         time_to_recharge = ((energy_level*500)-energy) / charge_level
         print(time_to_recharge)
-        nextMineTime = time.time()+time_to_recharge   
+        nextMineTime = time.time()+time_to_recharge
+        
     
     
 
-@aiocron.crontab('*/50 * * * *')
+@aiocron.crontab('*/60 * * * *')
 async def updateWebviewUrl():
     global url, auth
     
     url = await getUrl()
     print(url)
     auth = authToken(url.url)
+    url = url.url
 
 @client.on(events.NewMessage())
 async def handler(event):
