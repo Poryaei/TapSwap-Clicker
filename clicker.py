@@ -4,7 +4,7 @@ from telethon.sync import functions, types, events
 
 import json, requests, urllib, time, aiocron, random, ssl
 
-import socks
+
 
 # -----------
 with open('config.json') as f:
@@ -20,7 +20,7 @@ db = {
 VERSION = "1.1"
 START_TIME = time.time()
 
-client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}", proxy=(socks.SOCKS5, '127.0.0.1', 2080))
+client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}", )
 client.start()
 client_id = client.get_me(True).user_id
 
