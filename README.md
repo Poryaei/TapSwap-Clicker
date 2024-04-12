@@ -21,8 +21,12 @@ A Python bot and automated clicker for accumulating TapSwap on Telegram.
    - Create a new account and get the api_id and api_hash (https://my.telegram.org)
    - Get admin chat id from (https://t.me/chatIDrobot)
    - Edit config.json file
-   
-4. Run the clicker bot
+
+4. Automatic Upgrade Settings for Boosts
+   - In the Config.json file, set the auto_upgrade value to true for automatic boost updates.
+   - Configure the upgrade level restrictions for each boost separately.
+
+5. Run the clicker bot
    ```
    python clicker.py
    ```
