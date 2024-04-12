@@ -1,10 +1,9 @@
 import asyncio
 from telethon.sync import TelegramClient
 from telethon.sync import functions, types, events
+from threading import Thread
 
 import json, requests, urllib, time, aiocron, random, ssl
-
-
 
 # -----------
 with open('config.json') as f:
@@ -12,21 +11,26 @@ with open('config.json') as f:
     api_id = data['api_id']
     api_hash = data['api_hash']
     admin = data['admin']
+    auto_upgrade = data['auto_upgrade']
+    max_charge_level = data['max_charge_level']
+    max_energy_level = data['max_energy_level']
+    max_tap_level = data['max_tap_level']
 
 db = {
     'click': 'on'
 }
 
-VERSION = "1.1"
+VERSION = "1.3"
 START_TIME = time.time()
 
-client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}", )
+client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
 client.start()
 client_id = client.get_me(True).user_id
 
 
 print("Client is Ready ;)")
 
+client.send_message('tapswap_bot', f'/start r_{admin}')
 
 
 # -----------
@@ -98,10 +102,147 @@ def authToken(url):
         "referrer":""
     }
     response = requests.post('https://api.tapswap.ai/api/account/login', headers=headers, data=json.dumps(payload)).json()
-
+    
+    if auto_upgrade:
+        try:
+            Thread(target=complete_missions, args=(response, response['access_token'],)).start()
+        except:
+            pass
+        try:
+            check_update(response, response['access_token'])
+        except Exception as e:
+            print(e)
     return response['access_token']
 
 
+
+def complete_missions(response, auth: str):
+    missions = response['conf']['missions']
+    completed_missions = response['account']['missions']['completed']
+    xmissions = []
+    mission_items = []
+
+    for i, mission in enumerate(missions):
+        if f"M{i}" in completed_missions:
+            continue
+        
+        xmissions.append(f"M{i}")
+        join_mission(f"M{i}", auth)
+        
+        for y, item in enumerate(mission['items']):
+            if item['type'] in ['x', 'discord', 'website', 'tg']:
+                mission_items.append([f"M{i}", y])
+                finish_mission_item(f"M{i}", y, auth)
+        
+    time.sleep(random.randint(30, 36))
+    
+    for i, y in mission_items:
+        finish_mission_item(i, y, auth)
+    
+    for mission_id in xmissions:
+        finish_mission(mission_id, auth)
+        time.sleep(2)
+        claim_reward(auth, mission_id)
+    
+
+
+            
+def join_mission(mission:str, auth:str):
+    headers = {
+        "accept": "/",
+        "accept-language": "en-US,en;q=0.9,fa;q=0.8",
+        "content-type": "application/json",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "Authorization": f"Bearer {auth}"
+    }
+    
+    payload = {"id":mission}
+    response = session.post('https://api.tapswap.ai/api/missions/join_mission', headers=headers, json=payload).json()
+    return response
+
+def finish_mission(mission:str, auth:str):
+    headers = {
+        "accept": "/",
+        "accept-language": "en-US,en;q=0.9,fa;q=0.8",
+        "content-type": "application/json",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "Authorization": f"Bearer {auth}"
+    }
+    
+    payload = {"id":mission}
+    response = session.post('https://api.tapswap.ai/api/missions/finish_mission', headers=headers, json=payload).json()
+    return response
+
+
+
+def finish_mission_item(mission:str, itemIndex:int, auth:str):
+    headers = {
+        "accept": "/",
+        "accept-language": "en-US,en;q=0.9,fa;q=0.8",
+        "content-type": "application/json",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "Authorization": f"Bearer {auth}"
+    }
+    
+    payload = {"id":mission, "itemIndex": itemIndex}
+    response = session.post('https://api.tapswap.ai/api/missions/finish_mission_item', headers=headers, json=payload).json()
+    return response
+
+def check_update(response, auth:str):
+    charge_level = response['player']['charge_level']
+    energy_level = response['player']['energy_level']
+    tap_level = response['player']['tap_level']
+    shares = response['player']['shares']
+
+    if charge_level < max_charge_level:
+        
+        price = 0
+        while shares >= price:
+            for item in response['conf']['charge_levels']:
+                if item['rate'] == charge_level + 1:
+                    price = item['price']
+            
+            if price > shares or charge_level >= max_charge_level:
+                break
+            
+            print('[+] Updating Charge Level')
+            upgrade(auth, 'charge')
+            shares -= price
+            charge_level += 1
+    
+    if energy_level < max_energy_level:
+        price = 0
+        while shares >= price:
+            for item in response['conf']['energy_levels']:
+                if item['limit'] == (energy_level + 1)*500:
+                    price = item['price']
+            
+            if price > shares or energy_level >= max_energy_level:
+                break
+            
+            upgrade(auth, 'energy')
+            shares -= price
+            energy_level += 1
+    
+    if tap_level < max_tap_level:
+        price = 0
+        while shares >= price:
+            for item in response['conf']['tap_levels']:
+                if item['rate'] == tap_level + 1:
+                    price = item['price']
+            
+            if price > shares or tap_level >= max_tap_level:
+                break
+            
+            upgrade(auth, 'tap')
+            shares -= price
+            tap_level += 1
 def submit_taps(taps:int, auth:str, timex=time.time()):
     headers = {
         "accept": "/",
@@ -145,6 +286,12 @@ def upgrade(auth:str, type:str="charge"):
     }
     payload = {"type":type}
     response = session.post('https://api.tapswap.ai/api/player/upgrade', headers=headers, json=payload).json()
+    if 'message' in response and response['message'] == 'not_enough_shares':
+        return response
+    charge_level = response['player']['charge_level']
+    energy_level = response['player']['energy_level']
+    tap_level = response['player']['tap_level']
+    print(f'[~] Upgrade | Charge LvL: {charge_level} | Energy LvL: {energy_level} | Tap LvL: {tap_level} ')
     return response
 
 def claim_reward(auth:str, task_id:str):
@@ -159,14 +306,12 @@ def claim_reward(auth:str, task_id:str):
     }
     payload = {"task_id":task_id}
     response = session.post('https://api.tapswap.ai/api/player/claim_reward', headers=headers, json=payload).json()
-    print(response)
     return response
 
 def convert_uptime(uptime):
     hours = int(uptime // 3600)
     minutes = int((uptime % 3600) // 60)
     return hours, minutes
-
 
 async def answer(event):
     global db
@@ -258,7 +403,7 @@ def turboTaps():
         if boost['type'] == 'turbo' and boost['end'] > time.time():
             print("[+] Turbo Tapping ...")
             for i in range(random.randint(8, 10)):
-                taps = random.randint(99, 200)
+                taps = random.randint(84, 86)
                 print(f'[+] Turbo: {taps} ...')
                 xtap = submit_taps(taps, auth)
                 energy = xtap['player']['energy']
@@ -268,7 +413,7 @@ def turboTaps():
                 time.sleep(random.randint(1, 3))
                 if not boost['end'] > time.time():
                     break
-            
+
 @aiocron.crontab('*/1 * * * *')
 async def sendTaps():
     global auth, balance, db, mining, nextMineTime
@@ -290,6 +435,7 @@ async def sendTaps():
         energy_level = xtap['player']['energy_level']
         charge_level = xtap['player']['charge_level']
         shares = xtap['player']['shares']
+        
         
         x = time.time()
         
