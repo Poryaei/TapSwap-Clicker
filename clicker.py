@@ -97,7 +97,7 @@ def authToken(url):
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     payload = {
@@ -158,7 +158,7 @@ def join_mission(mission:str, auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     
@@ -175,7 +175,7 @@ def finish_mission(mission:str, auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     
@@ -193,7 +193,7 @@ def finish_mission_item(mission:str, itemIndex:int, auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     
@@ -260,7 +260,7 @@ def submit_taps(taps:int, auth:str, timex=time.time()):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     
@@ -278,7 +278,7 @@ def apply_boost(auth:str, type:str="energy"):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     payload = {"type":type}
@@ -295,7 +295,7 @@ def upgrade(auth:str, type:str="charge"):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     payload = {"type":type}
@@ -317,7 +317,7 @@ def claim_reward(auth:str, task_id:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     payload = {"task_id":task_id}
@@ -333,7 +333,7 @@ def tap_stats(auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "323",
+        "x-cv": "1",
         "X-App": "tapswap_server"
     }
     response = session.get('https://api.tapswap.ai/api/stat', headers=headers).json()
