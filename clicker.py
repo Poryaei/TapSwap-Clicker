@@ -8,6 +8,7 @@ import json, requests, urllib, time, aiocron, random, ssl, psutil
 import sys
 
 # -----------
+
 with open('config.json') as f:
     data = json.load(f)
     api_id = data['api_id']
@@ -18,11 +19,12 @@ with open('config.json') as f:
     max_energy_level = data['max_energy_level']
     max_tap_level = data['max_tap_level']
 
+
 db = {
     'click': 'on'
 }
 
-VERSION = "1.4"
+VERSION = "1.5"
 START_TIME = time.time()
 
 client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
@@ -89,7 +91,29 @@ async def getUrl():
         )
     )
 
+def x_cv_version(url):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+    }
+
+    s = requests.Session()
+    s.headers = headers
+
+    r = requests.get(url, headers=headers)
+
+    f_name = "main"+r.text.split('src="/assets/main')[1].split('"')[0]
+    
+    try:
+        r = requests.get(f'https://app.tapswap.club/assets/{f_name}')
+        x_cv = r.text.split('api.headers.set("x-cv","')[1].split('"')[0]
+        print('[+] X-CV:  ', x_cv)
+    except Exception as e:
+        print("[!] Error in X-CV:  ", e)
+        x_cv = 1
+    return x_cv
+
 def authToken(url):
+    global balance
     headers = {
         "accept": "/",
         "accept-language": "en-US,en;q=0.9,fa;q=0.8",
@@ -97,14 +121,21 @@ def authToken(url):
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     payload = {
         "init_data": urllib.parse.unquote(url).split('tgWebAppData=')[1].split('&tgWebAppVersion')[0],
         "referrer":""
     }
-    response = requests.post('https://api.tapswap.ai/api/account/login', headers=headers, data=json.dumps(payload)).json()
+    while True:
+        try:
+            response = requests.post('https://api.tapswap.ai/api/account/login', headers=headers, data=json.dumps(payload)).json()
+            balance = response['player']['shares']
+            break
+        except Exception as e:
+            print("[!] Error in auth:  ", e)
+            # time.sleep(3)
     
     if auto_upgrade:
         try:
@@ -115,6 +146,7 @@ def authToken(url):
             check_update(response, response['access_token'])
         except Exception as e:
             print(e)
+    
     return response['access_token']
 
 
@@ -158,7 +190,7 @@ def join_mission(mission:str, auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     
@@ -175,7 +207,7 @@ def finish_mission(mission:str, auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     
@@ -193,7 +225,7 @@ def finish_mission_item(mission:str, itemIndex:int, auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     
@@ -260,12 +292,17 @@ def submit_taps(taps:int, auth:str, timex=time.time()):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     
     payload = {"taps":taps, "time":timex}
-    response = session.post('https://api.tapswap.ai/api/player/submit_taps', headers=headers, json=payload).json()
+    while True:
+        try:
+            response = session.post('https://api.tapswap.ai/api/player/submit_taps', headers=headers, json=payload).json()
+            break
+        except Exception as e:
+            print("[!] Error in Tapping: ", e)
     return response
 
 def apply_boost(auth:str, type:str="energy"):
@@ -278,7 +315,7 @@ def apply_boost(auth:str, type:str="energy"):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     payload = {"type":type}
@@ -295,7 +332,7 @@ def upgrade(auth:str, type:str="charge"):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     payload = {"type":type}
@@ -317,7 +354,7 @@ def claim_reward(auth:str, task_id:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     payload = {"task_id":task_id}
@@ -333,7 +370,7 @@ def tap_stats(auth:str):
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
-        "x-cv": "1",
+        "x-cv": x_cv,
         "X-App": "tapswap_server"
     }
     response = session.get('https://api.tapswap.ai/api/stat', headers=headers).json()
@@ -443,8 +480,8 @@ Just a powerful clicker and non-stop bread 🚀
 
 To start Tapping , you can use the following commands:
 
-🟣 `/click on` - Start collecting Not Coins
-🟣 `/click off` - Stop collecting Not Coins
+🟣 `/click on` - Start collecting TapSwaps
+🟣 `/click off` - Stop collecting TapSwaps
 🟣 `/ping` - Check if the robot is online
 🟣 `/help` - Display help menu
 🟣 `/balance` - Show Tap Swap balance
@@ -469,6 +506,7 @@ Coded By: @uPaSKaL | GitHub: [Poryaei](https://github.com/Poryaei)
 session = requests.sessions.Session()
 session.mount("https://", BypassTLSv1_3())
 url = getUrlsync().url
+x_cv = x_cv_version(url)
 auth = authToken(url)
 balance = 0
 mining = False
@@ -511,6 +549,7 @@ async def sendTaps():
     
     # ---- Check Energy:
     mining = True
+    fulltank = False
     try:
     
         xtap = submit_taps(1, auth)
@@ -519,20 +558,14 @@ async def sendTaps():
         energy_level = xtap['player']['energy_level']
         charge_level = xtap['player']['charge_level']
         shares = xtap['player']['shares']
-        
-        
-        x = time.time()
-        
+                
         if energy >= (energy_level*500)-(tap_level*random.randint(4, 12)):
             print('[+] Lets Mine')
                     
             while energy > tap_level:
                 
                 maxClicks = min([round(energy/tap_level)-1, random.randint(70, 96)])
-                try:
-                    taps = maxClicks
-                except:
-                    taps = maxClicks
+                taps = maxClicks
                 if taps < 1:
                     break
                 print(f'[+] Sending {taps} taps ...')
@@ -547,10 +580,8 @@ async def sendTaps():
                 if energy < tap_level*3:
                     break
         
-        print("Time: ", time.time() - x,"S")
         
         balance = shares
-        fulltank = False
         
         for boost in xtap['player']['boost']:
             if boost['type'] == 'energy' and boost['cnt'] > 0:
@@ -577,18 +608,22 @@ async def sendTaps():
     
     if not fulltank:
         time_to_recharge = ((energy_level*500)-energy) / charge_level
-        print(time_to_recharge)
+        print(f"[~] Sleeping: {time_to_recharge} seconds ...")
         nextMineTime = time.time()+time_to_recharge
         
     
     
 
-@aiocron.crontab('*/60 * * * *')
+@aiocron.crontab('*/45 * * * *')
 async def updateWebviewUrl():
-    global url, auth
+    global url, auth, x_cv
     
     url = await getUrl()
     print(url)
+    try:
+        x_cv = x_cv_version(url.url)
+    except:
+        pass
     auth = authToken(url.url)
     url = url.url
 
