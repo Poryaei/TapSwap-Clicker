@@ -24,7 +24,7 @@ db = {
     'click': 'on'
 }
 
-VERSION = "1.5"
+VERSION = "1.6"
 START_TIME = time.time()
 
 client = TelegramClient('bot', api_id, api_hash, device_model=f"TapSwap Clicker V{VERSION}")
@@ -283,9 +283,19 @@ def check_update(response, auth:str):
             shares -= price
             tap_level += 1
 
-def submit_taps(taps:int, auth:str, timex=time.time()):
+def submit_taps(taps:int, auth:str, timex=int(time.time()*1000)):
+    o = int(time.time()*1000)
+    print(o, client_id)
+    result = o * client_id
+    result = result * client_id
+    result = result / client_id
+    result = result % client_id
+    result = result % client_id
+    content_id = int(result)
+
+    print("Content-Id:", str(content_id))
     headers = {
-        "accept": "/",
+        "accept": "*/*",
         "accept-language": "en-US,en;q=0.9,fa;q=0.8",
         "content-type": "application/json",
         "sec-fetch-dest": "empty",
@@ -293,16 +303,17 @@ def submit_taps(taps:int, auth:str, timex=time.time()):
         "sec-fetch-site": "same-site",
         "Authorization": f"Bearer {auth}",
         "x-cv": x_cv,
-        "X-App": "tapswap_server"
+        "X-App": "tapswap_server",
+        "Content-Id": str(content_id),
     }
-    
-    payload = {"taps":taps, "time":timex}
+    payload = {"taps":taps, "time":o}
     while True:
         try:
             response = session.post('https://api.tapswap.ai/api/player/submit_taps', headers=headers, json=payload).json()
             break
         except Exception as e:
             print("[!] Error in Tapping: ", e)
+            time.sleep(2)
     return response
 
 def apply_boost(auth:str, type:str="energy"):
