@@ -95,22 +95,7 @@ def x_cv_version(url):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     }
-
-    s = requests.Session()
-    s.headers = headers
-
-    r = requests.get(url, headers=headers)
-
-    f_name = "main"+r.text.split('src="/assets/main')[1].split('"')[0]
-    
-    try:
-        r = requests.get(f'https://app.tapswap.club/assets/{f_name}')
-        x_cv = r.text.split('api.headers.set("x-cv","')[1].split('"')[0]
-        print('[+] X-CV:  ', x_cv)
-    except Exception as e:
-        print("[!] Error in X-CV:  ", e)
-        x_cv = 1
-    return x_cv
+    return "607"
 
 def authToken(url):
     global balance
@@ -135,7 +120,7 @@ def authToken(url):
             break
         except Exception as e:
             print("[!] Error in auth:  ", e)
-            # time.sleep(3)
+            time.sleep(3)
     
     if auto_upgrade:
         try:
@@ -514,15 +499,17 @@ Coded By: @uPaSKaL | GitHub: [Poryaei](https://github.com/Poryaei)
 
 
 # ---------------
+balance = 0
+mining = False
+nextMineTime = 0
 session = requests.sessions.Session()
 session.mount("https://", BypassTLSv1_3())
 url = getUrlsync().url
 x_cv = x_cv_version(url)
 auth = authToken(url)
-balance = 0
-mining = False
-nextMineTime = 0
+
 print(url)
+
 # ---------------
 
 def turboTaps():
