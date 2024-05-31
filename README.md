@@ -28,7 +28,7 @@ A Python bot and automated clicker for accumulating TapSwap on Telegram.
 
 5. Run the clicker bot
    ```
-   python clicker.py
+   python app.py
    ```
    
 5. Control with bot commands:
