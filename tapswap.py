@@ -40,10 +40,10 @@ class TapSwap:
             "X-App": "tapswap_server",
         })
         
-        self.prepare_prerequisites()
-        
         self.session = requests.Session()
         self.session.mount("https://", BypassTLSv1_3())
+        
+        self.prepare_prerequisites()
         
     def prepare_prerequisites(self):
         uph = self.update_headers()
