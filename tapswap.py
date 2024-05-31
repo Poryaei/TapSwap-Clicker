@@ -165,13 +165,13 @@ class TapSwap:
                 session = requests.Session()
                 session.mount("https://", BypassTLSv1_3())
                 session.headers = headers
-                scraper = cloudscraper.create_scraper()
+                scraper = cloudscraper.create_scraper(sess=session)
 
                 response = scraper.get("https://app.tapswap.club", headers=headers)
 
                 # Extract x-cv from response
                 f_name = "main" + response.text.split('src="/assets/main')[1].split('"')[0]
-                response = session.get(f'https://app.tapswap.club/assets/{f_name}')
+                response = scraper.get(f'https://app.tapswap.club/assets/{f_name}')
                 x_cv = response.text.split('api.headers.set("x-cv","')[1].split('"')[0]
 
                 # Extract and update headers from response
@@ -189,7 +189,6 @@ class TapSwap:
 
             except Exception as e:
                 print("[!] Error in X-CV:", e)
-                self.x_cv = "608"
                 time.sleep(3)
                 
 
