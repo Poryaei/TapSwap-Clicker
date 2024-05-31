@@ -11,7 +11,6 @@ from BypassTLS import BypassTLSv1_3
 
 class TapSwap:
     def __init__(self, url: str, auto_upgrade:bool, max_charge_level:int, max_energy_level:int, max_tap_level:int):
-        
         if auto_upgrade:
             self.max_charge_level = max_charge_level
             self.max_energy_level = max_energy_level
@@ -39,6 +38,7 @@ class TapSwap:
             "Authorization": f"Bearer {self.access_token}",
             "x-cv": self.x_cv,
             "X-App": "tapswap_server",
+            "x-bot": "no",
         })
 
         self.session = requests.Session()
@@ -161,11 +161,11 @@ class TapSwap:
                 session.headers = headers
                 scraper = cloudscraper.create_scraper()
 
-                response = scraper.get("https://main.tapok-web.pages.dev/", headers=headers)
+                response = scraper.get("https://app.tapswap.club", headers=headers)
 
                 # Extract x-cv from response
                 f_name = "main" + response.text.split('src="/assets/main')[1].split('"')[0]
-                response = session.get(f'https://main.tapok-web.pages.dev/assets/{f_name}')
+                response = session.get(f'https://app.tapswap.club/assets/{f_name}')
                 x_cv = response.text.split('api.headers.set("x-cv","')[1].split('"')[0]
 
                 # Extract and update headers from response
