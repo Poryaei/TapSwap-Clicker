@@ -5,3 +5,4 @@ urllib3
 aiocron
 psutil
 cloudscraper
+bs4
