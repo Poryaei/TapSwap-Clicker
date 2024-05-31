@@ -117,12 +117,18 @@ class TapSwap:
                 if 'chq' in response:
                     chq_result = self.extract_chq_result(response['chq'])
                     payload['chr'] = chq_result
+                    
                     print("[~] ByPass CHQ:  ", chq_result)
                     response = requests.post(
                         'https://api.tapswap.ai/api/account/login',
                         headers=self.headers,
                         data=json.dumps(payload)
                     ).json()
+                    
+                if not 'access_token' in response:
+                    print('[!] There is no access_token in response')
+                    continue
+                        
                     
                 
                 self.client_id = response['player']['id']
@@ -313,15 +319,19 @@ class TapSwap:
         for boost in xtap['player']['boost']:
             if boost['type'] == 'turbo' and boost['end'] > time.time():
                 for i in range(random.randint(3, 7)):
+                    
                     taps = random.randint(84, 86)
+                    
                     sleepTime = self.sleep_time(taps)
                     print(f'[~] Sleeping {sleepTime/6} for next tap.')
                     time.sleep(sleepTime/6)
+                    
                     print(f'[+] Turbo: {taps} ...')
                     xtap = self.submit_taps(taps)
                     shares = xtap['player']['shares']
+                    
                     print(f'[+] Balance : {shares}')
-                
+                    self.balance = shares
                 if boost['cnt'] > 0:
                     print('[+] Activing Turbo ...')
                     self.apply_boost("turbo")
