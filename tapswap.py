@@ -6,6 +6,7 @@ import random
 import cloudscraper
 import sys
 
+from bs4 import BeautifulSoup
 from BypassTLS import BypassTLSv1_3
 
 class TapSwap:
@@ -39,11 +40,12 @@ class TapSwap:
             "x-cv": self.x_cv,
             "X-App": "tapswap_server",
         })
-        
+
         self.session = requests.Session()
         self.session.mount("https://", BypassTLSv1_3())
         
         self.prepare_prerequisites()
+        
         
     def prepare_prerequisites(self):
         uph = self.update_headers()
@@ -55,6 +57,44 @@ class TapSwap:
         if atk == False:
             print("[!] We ran into trouble with the get auth token! 🚫 The script is stopping.")
             sys.exit()
+    
+    def extract_codes_from_html(self, html):
+        soup = BeautifulSoup(html, 'html.parser')
+        div_elements = soup.find_all('div')
+        codes = {}
+        for div in div_elements:
+            if 'id' in div.attrs and '_d_' in div.attrs:
+                codes[div['id']] = div['_d_']
+        return codes
+
+    def run_code_and_calculate_result(self, code):
+        rt_element_content = code.split('rt["inner" + "HTM" + "L"] = ')[1].split('\n')[0]
+        codes = self.extract_codes_from_html(rt_element_content)
+
+        va = None
+        vb = None
+        for k, v in codes.items():
+            if k in code.split('\n')[5]:
+                va = v
+            if k in code.split('\n')[6]:
+                vb = v
+        code_to_execute = code.split('return ')[1].split(';')[0]
+        code_to_execute = code_to_execute.replace('va', va).replace('vb', vb)
+        result = eval(code_to_execute)
+        return result
+    
+    def extract_chq_result(self, chq):
+        len_value = len(chq)
+        bytes_array = bytearray(len_value // 2)
+        x = 157
+        
+        for t in range(0, len_value, 2):
+            bytes_array[t // 2] = int(chq[t:t + 2], 16)
+        
+        xored = bytearray(t ^ x for t in bytes_array)
+        decoded = xored.decode('utf-8')
+        js_code = decoded.split('try {eval("document.getElementById");} catch {return 0xC0FEBABE;}')[1].split('})')[0].strip()
+        return self.run_code_and_calculate_result(js_code)
 
     def get_auth_token(self):
         payload = {
@@ -73,11 +113,21 @@ class TapSwap:
                     data=json.dumps(payload)
                 ).json()
                 
+                
+                if 'chq' in response:
+                    chq_result = self.extract_chq_result(response['chq'])
+                    payload['chr'] = chq_result
+                    print("[~] ByPass CHQ:  ", chq_result)
+                    response = requests.post(
+                        'https://api.tapswap.ai/api/account/login',
+                        headers=self.headers,
+                        data=json.dumps(payload)
+                    ).json()
+                    
+                
                 self.client_id = response['player']['id']
                 self.headers_requests['Authorization'] = f"Bearer {response['access_token']}"
                 self.balance = response['player']['shares']
-                energy = response['player']['energy']
-                tap_level = response['player']['tap_level']
                 energy_level = response['player']['energy_level']
                 charge_level = response['player']['charge_level']
                 self._time_to_recharge = (energy_level*500) / charge_level
@@ -249,7 +299,7 @@ class TapSwap:
                 print("[!] Error in Tapping:", e)
                 time.sleep(1)
     
-    def sleep_time(Self, num_clicks):
+    def sleep_time(self, num_clicks):
         
         time_to_sleep = 0
         
