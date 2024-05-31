@@ -28,7 +28,7 @@ VERSION    = "1.6.5"
 START_TIME = time.time()
 
 client = TelegramClient(
-    'Rose',
+    'bot',
     api_id,
     api_hash,
     device_model=f"TapSwap Clicker V{VERSION}"
