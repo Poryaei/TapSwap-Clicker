@@ -4,3 +4,4 @@ telethon
 urllib3
 aiocron
 psutil
+cloudscraper
