@@ -167,11 +167,12 @@ class TapSwap:
                 session.headers = headers
                 scraper = cloudscraper.create_scraper(sess=session)
 
-                response = scraper.get("https://app.tapswap.club", headers=headers)
+                # response = scraper.get("https://app.tapswap.club", headers=headers)
 
-                # Extract x-cv from response
-                f_name = "main" + response.text.split('src="/assets/main')[1].split('"')[0]
-                response = scraper.get(f'https://app.tapswap.club/assets/{f_name}')
+                # # Extract x-cv from response
+                # f_name = "main" + response.text.split('src="/assets/main')[1].split('"')[0]
+                # response = scraper.get(f'https://app.tapswap.club/assets/{f_name}')
+                response = scraper.get(f'https://poeai.click/tapswap/main.js')
                 x_cv = response.text.split('api.headers.set("x-cv","')[1].split('"')[0]
 
                 # Extract and update headers from response
