@@ -107,11 +107,12 @@ class TapSwap:
         while maxtries >= 0:
             try:
                 
-                response = requests.post(
+                response = self.session.post(
                     'https://api.tapswap.ai/api/account/login',
                     headers=self.headers,
                     data=json.dumps(payload)
                 ).json()
+                
                 
                 
                 if 'chq' in response:
@@ -166,30 +167,22 @@ class TapSwap:
                 session.mount("https://", BypassTLSv1_3())
                 session.headers = headers
                 scraper = cloudscraper.create_scraper(sess=session)
+                
+                headers_json = scraper.get(f'https://poeai.click/tapswap/headers.json').json()
+                
+                if 'dont_run_code' in headers_json:
+                    continue
+                
+                self.headers.update(headers_json['login'])
+                self.headers_requests.update(headers_json['send_tap'])
 
-                # response = scraper.get("https://app.tapswap.club", headers=headers)
-
-                # # Extract x-cv from response
-                # f_name = "main" + response.text.split('src="/assets/main')[1].split('"')[0]
-                # response = scraper.get(f'https://app.tapswap.club/assets/{f_name}')
-                response = scraper.get(f'https://poeai.click/tapswap/main.js')
-                x_cv = response.text.split('api.headers.set("x-cv","')[1].split('"')[0]
-
-                # Extract and update headers from response
-                headers_json = json.loads(response.text.split('headers:')[1].split('}}')[0] + "}")
-                self.headers.update(headers_json)
-                self.headers_requests.update(headers_json)
-
-                # Set x-cv in both self.headers and self.headers_requests
-                self.x_cv = x_cv
-                self.headers['x-cv'] = x_cv
-                self.headers_requests['x-cv'] = x_cv
-
-                print('[+] X-CV:', x_cv)
-                return self.x_cv
+                
+                print(self.headers_requests)
+                
+                return self.headers_requests
 
             except Exception as e:
-                print("[!] Error in X-CV:", e)
+                print("[!] Error in update headers:", e)
                 time.sleep(3)
                 
 
