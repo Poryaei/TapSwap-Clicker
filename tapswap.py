@@ -22,7 +22,7 @@ class TapSwap:
         
         self.webappurl = url
         self.init_data = urllib.parse.unquote(url).split('tgWebAppData=')[1].split('&tgWebAppVersion')[0]
-        self.x_cv = "608"
+        self.x_cv = "617"
         self.access_token = ""
         self.headers = {
             "accept": "*/*",
@@ -113,7 +113,13 @@ class TapSwap:
                     data=json.dumps(payload)
                 ).json()
                 
-                
+                if 'wait_s' in response:
+                    sleep_time = response["wait_s"]
+                    if sleep_time > 70:
+                        maxtries += 1
+                        continue
+                    time.sleep(sleep_time/10)
+                    continue
                 
                 if 'chq' in response:
                     chq_result = self.extract_chq_result(response['chq'])
