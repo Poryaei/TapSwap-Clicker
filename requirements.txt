@@ -6,3 +6,4 @@ aiocron
 psutil
 cloudscraper
 bs4
+js2py
