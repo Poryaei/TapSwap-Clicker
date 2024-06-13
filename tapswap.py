@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from BypassTLS import BypassTLSv1_3
 
 class TapSwap:
-    def __init__(self, url: str, auto_upgrade:bool, max_charge_level:int, max_energy_level:int, max_tap_level:int):
+    def __init__(self, url: str, chq_bypass, auto_upgrade:bool, max_charge_level:int, max_energy_level:int, max_tap_level:int):
         if auto_upgrade:
             self.max_charge_level = max_charge_level
             self.max_energy_level = max_energy_level
@@ -25,6 +25,7 @@ class TapSwap:
         self.init_data = urllib.parse.unquote(url).split('tgWebAppData=')[1].split('&tgWebAppVersion')[0]
         self.x_cv = "617"
         self.access_token = ""
+        self.chq_bypass = chq_bypass
         self.headers = {
             "accept": "*/*",
             "accept-language": "en-US,en;q=0.9,fa;q=0.8",
@@ -59,21 +60,8 @@ class TapSwap:
             print("[!] We ran into trouble with the get auth token! 🚫 The script is stopping.")
             sys.exit()
     
-    def run_code_and_calculate_result(self, code):
-        x = JSCodeProcessor(code)
-        return x.execute_js_code()
-    
     def extract_chq_result(self, chq):
-        len_value = len(chq)
-        bytes_array = bytearray(len_value // 2)
-        x = 157
-        
-        for t in range(0, len_value, 2):
-            bytes_array[t // 2] = int(chq[t:t + 2], 16)
-        
-        xored = bytearray(t ^ x for t in bytes_array)
-        decoded = xored.decode('utf-8')
-        return self.run_code_and_calculate_result(decoded)
+        return self.chq_bypass(chq)
 
     def get_auth_token(self):
         payload = {
@@ -362,54 +350,3 @@ class TapSwap:
     def time_to_recharge(self):
         return self._time_to_recharge + random.randint(60*2, 60*12)
 
-class JSCodeProcessor:
-    def __init__(self, js_code):
-        self.js_code = js_code
-        self.data = None
-        self.codes = {}
-        self.code_to_run = ""
-
-    def extract_data(self):
-        data = "h['innerHTML']" + self.js_code.split("h['innerHTML']")[1].split('}()));function a()')[0].replace(';', ';\n\n').replace("'+'", '')
-        data = data.replace('\\x20', ' ').replace('\\x22', '"')
-        self.data = data
-        return data
-
-    def parse_html(self):
-        if self.data is None:
-            self.extract_data()
-        soup = BeautifulSoup(self.data, 'html.parser')
-        div_elements = soup.find_all('div')
-        for div in div_elements:
-            if 'id' in div.attrs and '_v' in div.attrs:
-                self.codes[div['id']] = div['_v']
-        
-        return self.codes
-
-    def build_js_code(self):
-        if not self.codes:
-            self.parse_html()
-
-        cjk = self.data.split('var i=')[1].split(';')[0].split(',')
-        code_to_run = "function() {"
-        for k, v in self.codes.items():
-            if k in cjk[0]:
-                i = v
-                code_to_run += f"i={v};\n"
-            if k in cjk[1]:
-                j = v
-                code_to_run += f"j={v};\n"
-
-        code_to_run += cjk[2] + ";\n"
-        r = 'return ' + self.data.split('return')[1].split(';')[0] + ';}'
-        code_to_run += r
-
-        self.code_to_run = code_to_run
-        return code_to_run
-
-    def execute_js_code(self):
-        if not self.code_to_run:
-            self.build_js_code()
-
-        r = js2py.eval_js(self.code_to_run)
-        return r()
