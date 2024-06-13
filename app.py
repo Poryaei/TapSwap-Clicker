@@ -3,6 +3,8 @@ import json, time, aiocron, psutil
 
 from threading import Thread
 from tapswap import TapSwap
+from bypass_js import driver_instance
+
 
 from telethon.sync import TelegramClient
 from telethon.sync import functions, events
@@ -199,7 +201,7 @@ mining       = False
 nextMineTime = 0
 
 url  = getUrlsync().url
-tapswap_client = TapSwap(url, auto_upgrade, max_charge_level, max_energy_level, max_tap_level)
+tapswap_client = TapSwap(url, driver_instance.execute_script, auto_upgrade, max_charge_level, max_energy_level, max_tap_level)
 
 print(url)
 
